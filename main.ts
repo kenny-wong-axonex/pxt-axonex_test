@@ -11,7 +11,9 @@ namespace R300 {
     // block text with spaces
 
     //% block
-    export function camlCaseTwo() {
+    export function transmit_uart_TXP0_RXP1() {
+        serial.redirect(SerialPin.P0, SerialPin.P1, 115200);
 
+        
     }
 }
