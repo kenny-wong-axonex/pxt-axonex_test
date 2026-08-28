@@ -1,9 +1,9 @@
-//% color=190 weight=100 icon="\uf1ec" block="Basic Blocks"
+//% color=190 weight=100 icon="\uf1ec" block="R300_Blocks"
 namespace R300 {
     //% block = "123 $text"
     //% text.defl="Hello"
     export function testing(text:string) {
-        return text;
+        return text+" hey";
 
     }
 
