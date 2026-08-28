@@ -1,5 +1,6 @@
 {
     "name": "test_2",
+    "version": "1.0.0",
     "description": "",
     "dependencies": {
         "core": "*",
