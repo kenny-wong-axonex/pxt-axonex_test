@@ -126,6 +126,6 @@ namespace R300ApiTx {
         basic.pause(5000);
         basic.clearScreen();
 
-        return false;
+        // return false;
     }
 }
