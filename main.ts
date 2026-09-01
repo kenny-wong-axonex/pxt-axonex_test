@@ -58,7 +58,7 @@ namespace R300ApiTx {
     //% block="send API command %cmd over UART"
     //% cmd.fieldEditor="gridpicker"
     //% cmd.fieldOptions.columns=3
-    export function sendApiPayload(cmd: ApiCommand, maxRetries: number = 3, timeoutMs: number = 500): boolean {
+    export function sendApiPayload(cmd: ApiCommand, maxRetries: number = 3, timeoutMs: number = 500): void {
         initAckListener();
 
         let actionStr = "";
@@ -112,7 +112,7 @@ namespace R300ApiTx {
                     basic.pause(300);
                     basic.clearScreen();
 
-                    return true;
+                    return;
                 }
                 basic.pause(20); // Yield to MakeCode event queue
             }
