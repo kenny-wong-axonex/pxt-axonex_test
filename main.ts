@@ -44,7 +44,7 @@ namespace ApiTx {
         };
 
         // 3. Stringify and send over UART
-        console.log(payload)
+        // console.log(payload)
         let jsonString = JSON.stringify(payload);
         serial.writeLine(jsonString);
     }
