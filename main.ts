@@ -1,4 +1,3 @@
-// Define non-editable API actions
 enum ApiCommand {
     //% block="Get Status"
     GetStatus,
@@ -7,9 +6,10 @@ enum ApiCommand {
     //% block="Reset Board"
     ResetBoard
 }
-
-//% color="#0fbc11" weight=100 namespace="R300ApiTx"
 namespace R300ApiTx {
+    for (let i = 0; i < 5; i++) {
+        serial.writeLine("test123");
+    }
     let pendingReqId = -1;
     let ackReceived = false;
     let listenerInitialized = false;
