@@ -45,8 +45,8 @@ namespace R300ApiTx {
     function calculateChecksum(data: string): number {
         let sum1 = 0;
         let sum2 = 0;
-        for (let i = 0; i < data.length; i++) {
-            sum1 = (sum1 + data.charCodeAt(i)) % 255;
+        for (let j = 0; j < data.length; j++) {
+            sum1 = (sum1 + data.charCodeAt(j)) % 255;
             sum2 = (sum2 + sum1) % 255;
         }
         return (sum2 << 8) | sum1;
@@ -133,5 +133,63 @@ namespace R300ApiTx {
         // return false;
     }
 }
+namespace r300 {
+    let listenerRegistered = false
 
+    export class R300Link {
+        constructor() {
+            // tx=P0 -> R300 GPIO21 (rx), rx=P1 <- R300 GPIO10 (tx).
+            // Hold Button A while resetting to skip the redirect and stay on
+            // USB serial instead, for debugging without a firmware reflash.
+            if (!input.buttonIsPressed(Button.A)) {
+                serial.redirect(SerialPin.P0, SerialPin.P1, BaudRate.BaudRate115200)
+            }
 
+            // Register only once — creating more than one R300Link must not
+            // stack duplicate serial.onDataReceived handlers.
+            if (!listenerRegistered) {
+                listenerRegistered = true
+                serial.onDataReceived(serial.delimiters(Delimiters.NewLine), function () {
+                    const line2 = serial.readLine()
+                    // Only answer R300's own ping — never its ack, or both
+                    // sides would ping-pong each other until the link saturates.
+                    if (line2.indexOf("R300_ping") >= 0) {
+                        serial.writeString(JSON.stringify({ MicroBit_alive: "yes" }) + "\n")
+                    }
+                })
+            }
+        }
+
+        /**
+         * Send a text message to R300, wrapped as JSON with a checksum.
+         */
+        //% blockId=r300_send_message
+        //% block="%this|send message %text to R300"
+        //% weight=90
+        sendMessage(text: string): void {
+            serial.writeString(JSON.stringify({ MicroBit: text, checksum: this.checksum(text) }) + "\n")
+        }
+
+        private checksum(text: string): number {
+            // Sum of char codes mod 256 — matches R300's Checksum256() for
+            // ASCII text (aimo_v1_edu_microbit_board.cc).
+            let sum = 0
+            for (let k = 0; k < text.length; k++) {
+                sum += text.charCodeAt(k)
+            }
+            return sum % 256
+        }
+    }
+
+    /**
+     * Connect to R300 over the P0/P1 UART link and start automatically
+     * answering its keep-alive pings.
+     */
+    //% blockId=r300_connect
+    //% block="connect to R300"
+    //% weight=100
+    //% blockSetVariable=r300Link
+    export function connect(): R300Link {
+        return new R300Link()
+    }
+}
