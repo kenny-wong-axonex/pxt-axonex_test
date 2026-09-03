@@ -9,7 +9,11 @@ enum ApiCommand {
 namespace R300ApiTx {
     for (let i = 0; i < 5; i++) {
         serial.writeLine("test123");
+        
+        led.toggle(0, 0)
+        basic.pause(500)
     }
+
     let pendingReqId = -1;
     let ackReceived = false;
     let listenerInitialized = false;
@@ -129,3 +133,5 @@ namespace R300ApiTx {
         // return false;
     }
 }
+
+
