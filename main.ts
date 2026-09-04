@@ -1,138 +1,50 @@
-enum ApiCommand {
-    //% block="Get Status"
-    GetStatus,
-    //% block="Set Sensor Mode"
-    SetSensorMode,
-    //% block="Reset Board"
-    ResetBoard
+enum MoveDirection {
+    //% block="forward"
+    Forward,
+    //% block="backward"
+    Backward
 }
+
+enum TurnDirection {
+    //% block="left"
+    Left,
+    //% block="right"
+    Right
+}
+
 namespace R300ApiTx {
-    for (let i = 0; i < 5; i++) {
-        serial.writeLine("test123");
-        
-        led.toggle(0, 0)
-        basic.pause(500)
-    }
-
-    let pendingReqId = -1;
-    let ackReceived = false;
-    let listenerInitialized = false;
-
     /**
-     * Initializes the UART listener to process incoming ACK packets.
-     * Expected ACK format: {"ack": timestamp, "status": "ok"}
+     * Drive forward or backward for a set duration
+     * @param time duration in seconds, eg: 1
      */
-    function initAckListener() {
-        if (listenerInitialized) return;
-        listenerInitialized = true;
-
-        serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
-            let line = serial.readLine();
-            try {
-                let msg = JSON.parse(line);
-                if (msg && msg.ack === pendingReqId) {
-                    ackReceived = true;
-                }
-            } catch (e) {
-                // Ignore malformed or non-JSON serial input
-            }
-        });
+    //% block="drive %dir for %time s"
+    //% time.min=0 time.max=5 time.defl=1
+    //% weight=90
+    export function drive(dir: MoveDirection, time: number = 1): void {
+        let timeMs = time * 1000
+        if (dir === MoveDirection.Forward) {
+            r300.r300Link.controlMotor(0, 100, timeMs)
+        } else {
+            r300.r300Link.controlMotor(0, -100, timeMs)
+        }
     }
 
     /**
-     * Calculates a simple 16-bit Fletcher checksum for a string.
+     * Turn left or right (fixed 1 second)
      */
-    function calculateChecksum(data: string): number {
-        let sum1 = 0;
-        let sum2 = 0;
-        for (let j = 0; j < data.length; j++) {
-            sum1 = (sum1 + data.charCodeAt(j)) % 255;
-            sum2 = (sum2 + sum1) % 255;
+    //% block="turn %dir"
+    //% weight=89
+    export function turn(dir: TurnDirection): void {
+        if (dir === TurnDirection.Left) {
+            r300.r300Link.controlMotor(-25, 0, 1000)
+        } else {
+            r300.r300Link.controlMotor(25, 0, 1000)
         }
-        return (sum2 << 8) | sum1;
-    }
-
-    /**
-     * Send standardized API payload over UART with ACK wait & retry logic.
-     * Shows LED status indicators on success (Checkmark) or failure (X for 5s).
-     * @param cmd API Command to execute
-     * @param maxRetries Maximum retry attempts (default 3)
-     * @param timeoutMs Timeout in ms per attempt (default 500ms)
-     */
-    //% block="send API command %cmd over UART"
-    //% cmd.fieldEditor="gridpicker"
-    //% cmd.fieldOptions.columns=3
-    export function sendApiPayload(cmd: ApiCommand, maxRetries: number = 3, timeoutMs: number = 500): void {
-        initAckListener();
-
-        let actionStr = "";
-        let actionData: any = {};
-        let ts = input.runningTime(); // Timestamp serves as the unique request ID
-
-        switch (cmd) {
-            case ApiCommand.GetStatus:
-                actionStr = "getStatus";
-                actionData = { reqId: ts };
-                break;
-            case ApiCommand.SetSensorMode:
-                actionStr = "setMode";
-                actionData = { reqId: ts, mode: "active", rate: 500 };
-                break;
-            case ApiCommand.ResetBoard:
-                actionStr = "reset";
-                actionData = { reqId: ts, hard: true };
-                break;
-        }
-
-        let payload = {
-            ts: ts,
-            action: actionStr,
-            data: actionData
-        };
-
-        let jsonString = JSON.stringify(payload);
-        let chk = calculateChecksum(jsonString);
-
-        let framedMessage = JSON.stringify({
-            raw: jsonString,
-            chk: chk
-        });
-
-        // Retry loop
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            pendingReqId = ts;
-            ackReceived = false;
-
-            serial.writeLine(framedMessage);
-
-            // Wait for ACK or timeout
-            let startTime = input.runningTime();
-            while (input.runningTime() - startTime < timeoutMs) {
-                if (ackReceived) {
-                    pendingReqId = -1;
-
-                    // Debug Visual: Brief checkmark for success
-                    basic.showIcon(IconNames.Yes);
-                    basic.pause(300);
-                    basic.clearScreen();
-
-                    return;
-                }
-                basic.pause(20); // Yield to MakeCode event queue
-            }
-        }
-
-        // Execution failed after all retry attempts
-        pendingReqId = -1;
-
-        // Debug Visual: Show 'X' for 5 seconds on failure
-        basic.showIcon(IconNames.No);
-        basic.pause(5000);
-        basic.clearScreen();
-
-        // return false;
     }
 }
+
+
+
 //% color="#AA278D" icon="" block="R300"
 namespace r300 {
     let listenerRegistered = false
@@ -142,11 +54,16 @@ namespace r300 {
     // global event handler — controlMotor() polls this instead of reading serial itself.
     let controlMotorAckStatus = ""       // "" = none yet, else "success" | "fail"
     let controlMotorAckChecksum = -1
+    let controlServoAckStatus = ""       // "" = none yet, else "success" | "fail"
+    let controlServoAckChecksum = -1
 
-    const CONTROL_MOTOR_TIMEOUT_MS = 500    // ack-wait bound. Independent of `time` — R300
+    const CONTROL_MOTOR_TIMEOUT_MS = 2000    // ack-wait bound. Independent of `time` — R300
     // acks BEFORE running the move, so this only
     // has to cover round-trip latency.
+    const CONTROL_SERVO_TIMEOUT_MS = 2000    // servo
+
     const CONTROL_MOTOR_MAX_TIME_MS = 3000  // must match R300's kControlMotorMaxTimeMs
+    const CONTROL_SERVO_MAX_TIME_MS = 3000  // servo
 
     export class R300Link {
         constructor() {
@@ -167,6 +84,10 @@ namespace r300 {
                         controlMotorAckStatus = line.indexOf("success") >= 0 ? "success" : "fail"
                         controlMotorAckChecksum = extractChecksum(line)
                     }
+                    if (line.indexOf("control_servo_ack") >= 0) {
+                        controlServoAckStatus = line.indexOf("success") >= 0 ? "success" : "fail"
+                        controlServoAckChecksum = extractChecksum(line)
+                    }
                 })
             }
         }
@@ -174,9 +95,6 @@ namespace r300 {
         /**
          * Send a text message to R300, wrapped as JSON with a checksum.
          */
-        //% blockId=r300_send_message
-        //% block="%this|send message %text to R300"
-        //% weight=90
         sendMessage(text: string): void {
             serial.writeString(JSON.stringify({ MicroBit: text, checksum: checksum(text) }) + "\n")
         }
@@ -187,11 +105,6 @@ namespace r300 {
          * has finished, since R300 acks before it moves. Safe to call as a bare
          * statement if you don't care about the result.
          */
-        //% blockId=r300_control_motor
-        //% block="%this|move rotation %rotation forward %forward for %time ms"
-        //% rotation.min=-100 rotation.max=100
-        //% forward.min=-100 forward.max=100
-        //% weight=80
         controlMotor(rotation: number, forward: number, time: number): void {
             rotation = clamp(Math.round(rotation), -100, 100)
             forward = clamp(Math.round(forward), -100, 100)
@@ -216,8 +129,34 @@ namespace r300 {
             if (controlMotorAckChecksum != expected) return     // stale ack from an earlier call
             // return controlMotorAckStatus == "success"
         }
+
+        controlServo(angle_1: number, angle_2: number, time: number): void {
+            angle_1 = clamp(Math.round(angle_1), -1, 100)
+            angle_2 = clamp(Math.round(angle_2), -1, 100)
+            time = clamp(Math.round(time), -1, CONTROL_SERVO_MAX_TIME_MS)
+
+            const canonical = "" + angle_1 + "," + angle_2 + "," + time
+            const expected = checksum(canonical)
+            controlServoAckStatus = ""
+            controlServoAckChecksum = -1
+
+            serial.writeString(JSON.stringify({
+                cmd: "control_servo", a1: angle_1, a2: angle_2, time: time, checksum: expected
+            }) + "\n")
+
+            let waited = 0
+            while (controlServoAckStatus == "" && waited < CONTROL_SERVO_TIMEOUT_MS) {
+                basic.pause(20)
+                waited += 20
+            }
+
+            if (controlServoAckStatus == "") return             // link hiccup — give up
+            if (controlServoAckChecksum != expected) return     // stale ack from an earlier call
+            // return controlMotorAckStatus == "success"
+        }
     }
 
+    //////////////////
     function checksum(text: string): number {
         // Sum of char codes mod 256 — matches R300's Checksum256() for
         // ASCII text (aimo_v1_edu_microbit_board.cc).
@@ -245,27 +184,22 @@ namespace r300 {
         if (end == start) return -1
         return parseInt(line.substr(start, end - start))
     }
+    /////////////////////
 
-    /**
-     * Connect to R300 over the P0/P1 UART link.
-     */
-    //% blockId=r300_connect
-    //% block="connect to R300"
-    //% weight=100
-    //% blockSetVariable=r300Link
-    export function connect(): R300Link {
-        return new R300Link()
-    }
+
+    export let r300Link = new R300Link();
+
+    const MIN_GAP_MS = 1000
+    const MAX_GAP_MS = 5000
+    basic.forever(function () {
+        r300Link.sendMessage("Hello World!")
+        basic.pause(Math.randomRange(MIN_GAP_MS, MAX_GAP_MS))
+    })
+
+
 }
 
-let r300Link = r300.connect()
+
 
 // Random gap between hello messages — just a liveness heartbeat now (see R300's
 // passive silence-timeout watch), no reply expected.
-const MIN_GAP_MS = 1000
-const MAX_GAP_MS = 5000
-
-basic.forever(function () {
-    r300Link.sendMessage("Hello World!")
-    basic.pause(Math.randomRange(MIN_GAP_MS, MAX_GAP_MS))
-})
