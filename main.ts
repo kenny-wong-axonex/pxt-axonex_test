@@ -192,7 +192,7 @@ namespace r300 {
         //% rotation.min=-100 rotation.max=100
         //% forward.min=-100 forward.max=100
         //% weight=80
-        controlMotor(rotation: number, forward: number, time: number): boolean {
+        controlMotor(rotation: number, forward: number, time: number): void {
             rotation = clamp(Math.round(rotation), -100, 100)
             forward = clamp(Math.round(forward), -100, 100)
             time = clamp(Math.round(time), 0, CONTROL_MOTOR_MAX_TIME_MS)
@@ -212,9 +212,9 @@ namespace r300 {
                 waited += 20
             }
 
-            if (controlMotorAckStatus == "") return false            // link hiccup — give up
-            if (controlMotorAckChecksum != expected) return false    // stale ack from an earlier call
-            return controlMotorAckStatus == "success"
+            if (controlMotorAckStatus == "") return             // link hiccup — give up
+            if (controlMotorAckChecksum != expected) return     // stale ack from an earlier call
+            // return controlMotorAckStatus == "success"
         }
     }
 
