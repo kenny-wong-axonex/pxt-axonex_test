@@ -3,6 +3,11 @@ namespace r300 {
     export class R300Link {
         private latestAck: string = "";
         private latestFinish: string = "";
+        private latestStatus: string = "";
+        private latestLeftHand: string = "";
+        private latestRightHand: string = "";
+        private latestEmotion: string = "";
+        private latestVolume: string = "";
         private listenerRegistered: boolean = false;
 
         constructor() {
@@ -19,7 +24,29 @@ namespace r300 {
                     } else if (line.includes("_finish")) {
                         this.latestFinish = line;
                     } else {
-                        r300_api.dispatchApi(line);
+                        try {
+                            const parsed = JSON.parse(line);
+                            if (parsed.status) {
+                                this.latestStatus = "" + parsed.status;
+                            }
+                            if (parsed.left_hand !== undefined) {
+                                this.latestLeftHand = "" + parsed.left_hand;
+                            }
+                            if (parsed.right_hand !== undefined) {
+                                this.latestRightHand = "" + parsed.right_hand;
+                            }
+                            if (parsed.emotion) {
+                                this.latestEmotion = "" + parsed.emotion;
+                            }
+                            if (parsed.volume !== undefined) {
+                                this.latestVolume = "" + parsed.volume;
+                            }
+                            if (!parsed.status && parsed.left_hand === undefined && parsed.right_hand === undefined && !parsed.emotion && parsed.volume === undefined) {
+                                r300_api.dispatchApi(line);
+                            }
+                        } catch (e) {
+                            r300_api.dispatchApi(line);
+                        }
                     }
                 });
             }
@@ -66,6 +93,66 @@ namespace r300 {
             return success;
         }
 
+        public requestStatus(): string {
+            this.latestStatus = "";
+            const payload = JSON.stringify({ cmd: "get_status" });
+            serial.writeLine(payload);
+
+            let startTime = control.millis();
+            while (this.latestStatus == "" && control.millis() - startTime < 2000) {
+                basic.pause(10);
+            }
+            return this.latestStatus;
+        }
+
+        public requestLeftHand(): string {
+            this.latestLeftHand = "";
+            const payload = JSON.stringify({ cmd: "get_left_hand" });
+            serial.writeLine(payload);
+
+            let startTime = control.millis();
+            while (this.latestLeftHand == "" && control.millis() - startTime < 2000) {
+                basic.pause(10);
+            }
+            return this.latestLeftHand;
+        }
+
+        public requestRightHand(): string {
+            this.latestRightHand = "";
+            const payload = JSON.stringify({ cmd: "get_right_hand" });
+            serial.writeLine(payload);
+
+            let startTime = control.millis();
+            while (this.latestRightHand == "" && control.millis() - startTime < 2000) {
+                basic.pause(10);
+            }
+            return this.latestRightHand;
+        }
+
+        public requestEmotion(): string {
+            this.latestEmotion = "";
+            const payload = JSON.stringify({ cmd: "get_emotion" });
+            serial.writeLine(payload);
+
+            let startTime = control.millis();
+            while (this.latestEmotion == "" && control.millis() - startTime < 2000) {
+                basic.pause(10);
+            }
+            return this.latestEmotion;
+        }
+
+        public requestVolume(): string {
+            this.latestVolume = "";
+            const payload = JSON.stringify({ cmd: "get_volume" });
+            serial.writeLine(payload);
+
+            let startTime = control.millis();
+            while (this.latestVolume == "" && control.millis() - startTime < 2000) {
+                basic.pause(10);
+            }
+            return this.latestVolume;
+        }
+
         private showError(code: number): void {
             basic.showNumber(code);
             basic.pause(1000);
@@ -104,6 +191,7 @@ function checksum(text: string): number {
 }
 
 //% color="#E67E22" icon="\uf085" block="R300 Movement"
+//% groups="['Drive Control', 'Turn Control', 'Status Inquiry']"
 namespace r300_movement {
     const CONTROL_MOTOR_MAX_TIME_MS = 5000;
 
@@ -129,6 +217,7 @@ namespace r300_movement {
     //% block="drive %dir for %time seconds"
     //% time.defl=1
     //% weight=90
+    //% group="Drive Control"
     export function drive(dir: MoveDirection, time: number = 1): void {
         let timeMs = time * 1000;
         if (dir === MoveDirection.Forward) {
@@ -140,6 +229,7 @@ namespace r300_movement {
 
     //% block="turn %dir"
     //% weight=89
+    //% group="Turn Control"
     export function turn(dir: TurnDirection): void {
         if (dir === TurnDirection.Left) {
             controlMotor(-25, 0, 1000);
@@ -150,6 +240,7 @@ namespace r300_movement {
 }
 
 //% color="#E67E22" icon="\uf256" block="R300 Hands"
+//% groups="['Hand Control', 'Hand Status']"
 namespace r300_hands {
     export function controlServo(angle_1: number, angle_2: number, time: number): void {
         angle_1 = clamp(Math.round(angle_1), -1, 100);
@@ -171,13 +262,27 @@ namespace r300_hands {
     }
 
     //% block="move left hand to %pos"
+    //% group="Hand Control"
     export function leftHand(pos: HandPosition): void {
         controlServo(pos, -1, -1);
     }
 
     //% block="move right hand to %pos"
+    //% group="Hand Control"
     export function rightHand(pos: HandPosition): void {
         controlServo(-1, pos, -1);
+    }
+
+    //% block="get left hand position"
+    //% group="Hand Status"
+    export function getLeftHand(): string {
+        return r300.link.requestLeftHand();
+    }
+
+    //% block="get right hand position"
+    //% group="Hand Status"
+    export function getRightHand(): string {
+        return r300.link.requestRightHand();
     }
 }
 
@@ -236,8 +341,10 @@ namespace r300_api {
 }
 
 //% color="#E67E22" icon="\uf118" block="R300 Emotion"
+//% groups="['Emotion Control', 'Emotion Status']"
 namespace r300_emotion {
     //% block="show emotion %face"
+    //% group="Emotion Control"
     export function showEmotion(face: RobotEmotion): void {
         const payload = JSON.stringify({
             cmd: "set_emotion",
@@ -245,11 +352,19 @@ namespace r300_emotion {
         });
         serial.writeLine(payload);
     }
+
+    //% block="get current emotion"
+    //% group="Emotion Status"
+    export function getEmotion(): string {
+        return r300.link.requestEmotion();
+    }
 }
 
 //% color="#E67E22" icon="\uf028" block="R300 Speaker"
+//% groups="['Audio Actions', 'Speaker Status']"
 namespace r300_speaker {
     //% block="speak text %text"
+    //% group="Audio Actions"
     export function speakText(text: string): void {
         const payload = JSON.stringify({
             cmd: "speak",
@@ -257,11 +372,31 @@ namespace r300_speaker {
         });
         serial.writeLine(payload);
     }
+
+    //% block="set speaker volume to %volume"
+    //% volume.min=0 volume.max=100
+    //% group="Audio Actions"
+    export function setSpeakerVol(volume: number): void {
+        volume = clamp(Math.round(volume), 0, 100);
+        const payload = JSON.stringify({
+            cmd: "set_volume",
+            volume: volume
+        });
+        serial.writeLine(payload);
+    }
+
+    //% block="get speaker volume"
+    //% group="Speaker Status"
+    export function getSpeakerVol(): string {
+        return r300.link.requestVolume();
+    }
 }
 
 //% color="#E67E22" icon="\uf013" block="R300 Mode"
+//% groups="['Configuration', 'System Status']"
 namespace r300_mode {
     //% block="set robot mode to %mode"
+    //% group="Configuration"
     export function setRobotMode(mode: RobotMode): void {
         const payload = JSON.stringify({
             cmd: "set_mode",
@@ -270,13 +405,20 @@ namespace r300_mode {
         serial.writeLine(payload);
     }
 
-    //% block="bypass current mode with action %action"
-    export function bypassMode(action: string): void {
+    //% block="bypass mode %bypass"
+    //% group="Configuration"
+    export function bypassMode(bypass: boolean): void {
         const payload = JSON.stringify({
             cmd: "bypass_mode",
-            action: action
+            bypass: bypass
         });
         serial.writeLine(payload);
+    }
+
+    //% block="get robot status"
+    //% group="System Status"
+    export function getStatus(): string {
+        return r300.link.requestStatus();
     }
 }
 
