@@ -26,22 +26,20 @@ namespace r300 {
                     } else {
                         try {
                             const parsed = JSON.parse(line);
-                            if (parsed.status) {
+                            if (parsed.cmd === "system_status" && parsed.status !== undefined) {
                                 this.latestStatus = "" + parsed.status;
-                            }
-                            if (parsed.left_hand !== undefined) {
-                                this.latestLeftHand = "" + parsed.left_hand;
-                            }
-                            if (parsed.right_hand !== undefined) {
-                                this.latestRightHand = "" + parsed.right_hand;
-                            }
-                            if (parsed.emotion) {
+                            } else if (parsed.cmd === "servo_status") {
+                                if (parsed.a1 !== undefined) {
+                                    this.latestLeftHand = "" + parsed.a1;
+                                }
+                                if (parsed.a2 !== undefined) {
+                                    this.latestRightHand = "" + parsed.a2;
+                                }
+                            } else if (parsed.cmd === "emotion_status" && parsed.emotion !== undefined) {
                                 this.latestEmotion = "" + parsed.emotion;
-                            }
-                            if (parsed.volume !== undefined) {
+                            } else if (parsed.cmd === "volume_status" && parsed.volume !== undefined) {
                                 this.latestVolume = "" + parsed.volume;
-                            }
-                            if (!parsed.status && parsed.left_hand === undefined && parsed.right_hand === undefined && !parsed.emotion && parsed.volume === undefined) {
+                            } else {
                                 r300_api.dispatchApi(line);
                             }
                         } catch (e) {
@@ -350,7 +348,7 @@ namespace r300_emotion {
             cmd: "set_emotion",
             emotion: face
         });
-        serial.writeLine(payload);
+        r300.link.executeCommand("set_emotion", payload, 3, 2000);
     }
 
     //% block="get current emotion"
@@ -370,7 +368,8 @@ namespace r300_speaker {
             cmd: "speak",
             message: text
         });
-        serial.writeLine(payload);
+        const timeoutMs = text.length * 100 + 2000;
+        r300.link.executeCommand("speak", payload, 4, timeoutMs);
     }
 
     //% block="set speaker volume to %volume"
@@ -382,7 +381,7 @@ namespace r300_speaker {
             cmd: "set_volume",
             volume: volume
         });
-        serial.writeLine(payload);
+        r300.link.executeCommand("set_volume", payload, 5, 2000);
     }
 
     //% block="get speaker volume"
@@ -402,7 +401,7 @@ namespace r300_mode {
             cmd: "set_mode",
             mode: mode
         });
-        serial.writeLine(payload);
+        r300.link.executeCommand("set_mode", payload, 6, 2000);
     }
 
     //% block="bypass mode %bypass"
@@ -412,7 +411,7 @@ namespace r300_mode {
             cmd: "bypass_mode",
             bypass: bypass
         });
-        serial.writeLine(payload);
+        r300.link.executeCommand("bypass_mode", payload, 7, 2000);
     }
 
     //% block="get robot status"
