@@ -189,7 +189,7 @@ function checksum(text: string): number {
 }
 
 //% color="#E67E22" icon="\uf085" block="R300 Movement"
-//% groups="['Drive Control', 'Turn Control', 'Status Inquiry']"
+//% groups="['Drive Control', 'Turn Control', 'Custom Control', 'Status Inquiry']"
 namespace r300_movement {
     const CONTROL_MOTOR_MAX_TIME_MS = 5000;
 
@@ -234,6 +234,16 @@ namespace r300_movement {
         } else {
             controlMotor(25, 0, 1000);
         }
+    }
+
+    //% block="custom motor rotation %rotation forward %forward for %time ms"
+    //% rotation.min=-100 rotation.max=100
+    //% forward.min=-100 forward.max=100
+    //% time.min=0 time.max=5000 time.defl=1000
+    //% weight=88
+    //% group="Custom Control"
+    export function customMotor(rotation: number, forward: number, time: number): void {
+        controlMotor(rotation, forward, time);
     }
 }
 
