@@ -57,7 +57,7 @@ namespace r300 {
             this.latestFinish = "";
             let ackReceived = false;
 
-            for (let attempt = 0; attempt < 3; attempt++) {
+            for (let attempt = 0; attempt < 1; attempt++) {     ////////////////
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
