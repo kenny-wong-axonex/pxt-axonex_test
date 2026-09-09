@@ -2,6 +2,8 @@
 namespace r300 {
     export class R300Link {
         private latestAck: string = "";
+        private ackReceived: boolean = false;
+        private ackSuccess: boolean = false;
         private latestFinish: string = "";
         private latestStatus: string = "";
         private latestLeftHand: string = "";
@@ -21,6 +23,8 @@ namespace r300 {
                     const line = serial.readUntil(serial.delimiters(Delimiters.NewLine)).trim();
                     if (line.includes("_ack")) {
                         this.latestAck = line;
+                        this.ackReceived = true;
+                        this.ackSuccess = line.includes("success");
                     } else if (line.includes("_finish")) {
                         this.latestFinish = line;
                     } else {
@@ -54,29 +58,29 @@ namespace r300 {
 
         public executeCommand(deviceName: string, payload: string, errorCode: number, executeTimeoutMs: number = 2000): boolean {
             this.latestAck = "";
+            this.ackReceived = false;
+            this.ackSuccess = false;
             this.latestFinish = "";
-            let ackSuccess = false;
 
             for (let attempt = 0; attempt < 3; attempt++) {
+                this.ackReceived = false;
+                this.ackSuccess = false;
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
                 while (control.millis() - ackStartTime < 500) {
-                    if (this.latestAck.includes(deviceName)) {
-                        if (this.latestAck.includes("success")) {
-                            ackSuccess = true;
-                        }
+                    if (this.ackReceived && this.latestAck.includes(deviceName)) {
                         break;
                     }
                     basic.pause(10);
                 }
 
-                if (ackSuccess) {
+                if (this.ackReceived && this.latestAck.includes(deviceName) && this.ackSuccess) {
                     break;
                 }
             }
 
-            if (!ackSuccess) {
+            if (!(this.ackReceived && this.latestAck.includes(deviceName) && this.ackSuccess)) {
                 this.showError(errorCode);
                 return false;
             }
