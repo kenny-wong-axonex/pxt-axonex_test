@@ -10,3 +10,18 @@ _site
 *.tgz
 .header.json
 .simstate.json
+
+# MakeCode editor local history
+_history
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.sw?
+*~
+*.log
+
+# Build / temp
+typings/
+tmp/
+temp/
