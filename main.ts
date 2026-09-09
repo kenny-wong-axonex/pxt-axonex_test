@@ -6,9 +6,20 @@ serial.writeLine("Hello World!");
 // ── TX helper ───────────────────────────────────────────────
 // 同時 send 去 UART（R300）＋ 印去 USB log（terminal 睇到）
 function sendBoth(msg: string): void {
-    serial.writeLine(msg);        // → UART P0/P1（R300 收到）
-    console.log("[TX] " + msg);   // → USB（miniterm / Serial Monitor 睇到）
+    const data = msg;                          // 先把要 send 嘅 data 放入 string
+    console.log("[TX] " + data);               // → USB log
+    serial.writeLine(data);                    // → UART P0/P1（R300 收到）
 }
+
+// ── TEMP TEST（測試用，測試完刪走） ─────────────────────────
+// 撳 Button A → 雙手 180 → 雙手 90
+input.onButtonPressed(Button.A, function () {
+    console.log("[BTN] Button A pressed");   // ← confirm 個掣有 trigger
+    r300_hands.bothHands(180, 180);
+    basic.pause(500);                        // ← 0.5s 分隔，避免連續寫撞 log
+    r300_hands.bothHands(90, 90);
+    console.log("[BTN] done");
+});
 
 //% color="#AA278D" icon="\uf013" block="R300 Core"
 namespace r300 {
@@ -33,7 +44,7 @@ namespace r300 {
                 return;
             }
 
-            if (!input.buttonIsPressed(Button.A)) {
+            if (!input.buttonIsPressed(Button.B)) {
                 serial.redirect(SerialPin.P0, SerialPin.P1, BaudRate.BaudRate115200);
             }
 
@@ -211,8 +222,8 @@ namespace r300 {
             const MAX_GAP_MS = 5000;
             control.inBackground(function () {
                 while (true) {
+                    basic.pause(Math.randomRange(MIN_GAP_MS, MAX_GAP_MS));   // 先等，避免同第一個 command 撞
                     link.sendMessage("Hello World!");
-                    basic.pause(Math.randomRange(MIN_GAP_MS, MAX_GAP_MS));
                 }
             });
         }

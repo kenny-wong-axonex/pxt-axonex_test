@@ -86,21 +86,15 @@ COM4
 
 ### 監察 serial log
 
-**micro:bit（MakeCode）**：`main.ts` 用咗 `sendBoth()` + `console.log` 將所有 TX/RX mirror 去 USB（`console.log` 行 USB debug channel，同 `serial.redirect()` 無關），所以**唔使撳 Button A** 都睇到。
+`main.ts` 用咗 `sendBoth()` 將 TX 同時寫去 UART（P0/P1）＋ `console.log`（USB），RX 都喺 listener 度 `console.log` 去 USB。
 
 ```powershell
 python -m serial.tools.miniterm COM4 115200
 ```
 
-會見到：
+⚠️ **已知限制**：micro:bit 個 `console.log`（USB debug channel）**係 lossy 嘅**——短 message（如 `[BTN]`）出到，長 JSON（60+ 字）會被食晒。想睇完整 TX/RX 數據，要加 **USB-UART 轉換器 tap P0/P1**（見下面「已知問題」）。
 
-```
-Hello World!                        ← boot
-[TX] {"cmd":"get_status"}           ← micro:bit 發出（去 P0/P1）
-[RX] {"cmd":"system_status",...}    ← R300 回返嚟
-```
-
-**micro:bit dev 模式**：撳住 Button A 開機 → serial 留喺 USB（唔去 P0/P1），可以經 USB 直接同 micro:bit 通訊／測試。
+**micro:bit dev 模式**：撳住 Button B 開機 → serial 留喺 USB（唔去 P0/P1），可以經 USB 直接同 micro:bit 通訊／測試。
 
 **R300（ESP32，用 idf）**：
 
@@ -118,3 +112,21 @@ Copy-Item built\binary.hex D:\ -Force   # D: = MICROBIT 磁碟
 ```
 
 （首次要先 `npm install -g pxt` 同 `pxt target microbit`）
+
+### 已知問題（Known Issues）
+
+1. **`serial.redirect(P0, P1, 115200)` 會卡死**
+   - 診斷：喺 `ensureInitialized()` 加 marker，發現流程去到 `serial.redirect()` 就停（`REDIR` 出到，`REDIR-OK` 唔出）。
+   - skip 走 redirect 之後成個流程（`SERVO → INIT → [TX] → [BTN] done`）正常行得晒，所以卡點就係 redirect 呢一步。
+   - 最大嫌疑：P0/P1 駁住 R300 造成硬件衝突。**建議甩開 R300 條線，再撳掣試下 redirect 得唔得。**
+   - 呢個唔係 baud rate 問題（9600 都冇用），R300 需要 115200。
+
+2. **`console.log`（USB debug channel）lossy**
+   - 短 message（如 `[BTN]`）出到，長 JSON（60+ 字）會被食晒。
+   - 想睇完整 TX/RX，用 **USB-UART 轉換器 tap P0/P1**：
+     ```
+     micro:bit P0 (TX) ──→ 轉換器 RX
+     micro:bit P1 (RX) ──→ 轉換器 TX
+     GND ──→ GND
+     ```
+     再開第二個 miniterm（115200）睇個轉換器個 port。
