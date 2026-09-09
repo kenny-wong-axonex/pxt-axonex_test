@@ -1,3 +1,15 @@
+// ── Boot log ────────────────────────────────────────────────
+// 等 USB CDC ready 先 print，避免開機頭幾個字被食
+basic.pause(300);
+serial.writeLine("Hello World!");
+
+// ── TX helper ───────────────────────────────────────────────
+// 同時 send 去 UART（R300）＋ 印去 USB log（terminal 睇到）
+function sendBoth(msg: string): void {
+    serial.writeLine(msg);        // → UART P0/P1（R300 收到）
+    console.log("[TX] " + msg);   // → USB（miniterm / Serial Monitor 睇到）
+}
+
 //% color="#AA278D" icon="\uf013" block="R300 Core"
 namespace r300 {
     export class R300Link {
@@ -28,6 +40,7 @@ namespace r300 {
             this.listenerRegistered = true;
             serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
                 const line = serial.readLine().trim();
+                console.log("[RX] " + line);   // ← 收到嘅嘢都印去 USB log
                 if (line.includes("_ack")) {
                     if (this.expectedAckDevice != "" && line.includes(this.expectedAckDevice)) {
                         this.latestAck = line;
@@ -75,7 +88,7 @@ namespace r300 {
                 this.ackReceived = false;
                 this.ackSuccess = false;
                 this.latestAck = "";
-                serial.writeLine(payload);
+                sendBoth(payload);
 
                 let ackStartTime = control.millis();
                 while (control.millis() - ackStartTime < ackTimeoutMs) {
@@ -125,7 +138,7 @@ namespace r300 {
             this.ensureInitialized();
             this.latestStatus = "";
             const payload = JSON.stringify({ cmd: "get_status" });
-            serial.writeLine(payload);
+            sendBoth(payload);
 
             let startTime = control.millis();
             while (this.latestStatus == "" && control.millis() - startTime < 2000) {
@@ -139,7 +152,7 @@ namespace r300 {
             this.latestLeftHand = "";
             this.latestRightHand = "";
             const payload = JSON.stringify({ cmd: "get_servo" });
-            serial.writeLine(payload);
+            sendBoth(payload);
 
             let startTime = control.millis();
             while ((this.latestLeftHand == "" || this.latestRightHand == "") && control.millis() - startTime < 2000) {
@@ -161,7 +174,7 @@ namespace r300 {
             this.ensureInitialized();
             this.latestEmotion = "";
             const payload = JSON.stringify({ cmd: "get_emotion" });
-            serial.writeLine(payload);
+            sendBoth(payload);
 
             let startTime = control.millis();
             while (this.latestEmotion == "" && control.millis() - startTime < 2000) {
@@ -174,7 +187,7 @@ namespace r300 {
             this.ensureInitialized();
             this.latestVolume = "";
             const payload = JSON.stringify({ cmd: "get_volume" });
-            serial.writeLine(payload);
+            sendBoth(payload);
 
             let startTime = control.millis();
             while (this.latestVolume == "" && control.millis() - startTime < 2000) {
@@ -190,7 +203,7 @@ namespace r300 {
         }
 
         private sendMessage(text: string): void {
-            serial.writeString(JSON.stringify({ MicroBit: text, checksum: checksum(text) }) + "\n");
+            sendBoth(JSON.stringify({ MicroBit: text, checksum: checksum(text) }));
         }
 
         private startKeepAlive(): void {
