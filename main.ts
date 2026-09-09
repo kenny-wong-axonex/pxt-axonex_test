@@ -17,8 +17,8 @@ namespace r300 {
             if (!input.buttonIsPressed(Button.A)) {
                 serial.redirect(SerialPin.P0, SerialPin.P1, BaudRate.BaudRate115200);
             }
-
-            if (this.listenerRegistered) {
+            /*
+            if (!this.listenerRegistered) {
                 this.listenerRegistered = true;
                 serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
                     const line = serial.readLine().trim();
@@ -55,7 +55,7 @@ namespace r300 {
                     }
                 });
             }
-
+            */
             this.startKeepAlive();
         }
 
