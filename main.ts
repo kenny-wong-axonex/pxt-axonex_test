@@ -61,14 +61,16 @@ namespace r300 {
             this.ackReceived = false;
             this.ackSuccess = false;
             this.latestFinish = "";
+            const ackTimeoutMs = 500;
+            const maxAttempts = 3;
 
-            for (let attempt = 0; attempt < 3; attempt++) {
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 this.ackReceived = false;
                 this.ackSuccess = false;
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
-                while (control.millis() - ackStartTime < 500) {
+                while (control.millis() - ackStartTime < ackTimeoutMs) {
                     if (this.ackReceived && this.latestAck.includes(deviceName)) {
                         break;
                     }
@@ -81,6 +83,7 @@ namespace r300 {
             }
 
             if (!(this.ackReceived && this.latestAck.includes(deviceName) && this.ackSuccess)) {
+                // ACK timeout: report the error, then return so the next block can run.
                 this.showError(errorCode);
                 return false;
             }
