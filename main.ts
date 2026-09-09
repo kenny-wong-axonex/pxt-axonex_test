@@ -15,7 +15,7 @@ namespace r300 {
 
         constructor() {
         }
-
+        
         private ensureInitialized(): void {
             if (this.listenerRegistered) {
                 return;
@@ -62,7 +62,7 @@ namespace r300 {
         }
 
         public executeCommand(deviceName: string, payload: string, errorCode: number, executeTimeoutMs: number = 2000): boolean {
-            this.ensureInitialized();
+            // this.ensureInitialized();
             this.latestAck = "";
             this.ackReceived = false;
             this.ackSuccess = false;
