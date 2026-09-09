@@ -47,10 +47,10 @@ namespace r300 {
                             } else if (parsed.cmd === "volume_status" && parsed.volume !== undefined) {
                                 this.latestVolume = "" + parsed.volume;
                             } else {
-                                r300_api.dispatchApi(line);
+                                // r300_api.dispatchApi(line);
                             }
                         } catch (e) {
-                            r300_api.dispatchApi(line);
+                            // r300_api.dispatchApi(line);
                         }
                     }
                 });
