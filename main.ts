@@ -55,40 +55,54 @@ namespace r300 {
         public executeCommand(deviceName: string, payload: string, errorCode: number, executeTimeoutMs: number = 2000): boolean {
             this.latestAck = "";
             this.latestFinish = "";
-            let ackReceived = false;
+            let ackSuccess = false;
+            let finishSuccess = false;
 
-            for (let attempt = 0; attempt < 1; attempt++) {     ////////////////
+            // 1. Send command and wait for ACK
+            for (let attempt = 0; attempt < 3; attempt++) {
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
                 while (control.millis() - ackStartTime < 500) {
+                    // Check if the ack is for our device
                     if (this.latestAck.includes(deviceName)) {
-                        ackReceived = true;
-                        break;
+                        // Immediately check for success before it gets overwritten
+                        if (this.latestAck.includes("success")) {
+                            ackSuccess = true;
+                        }
+                        break; // Break the while loop
                     }
                     basic.pause(10);
                 }
 
-                if (ackReceived) {
-                    break;
+                if (ackSuccess) {
+                    break; // Break the retry loop if successful
                 }
             }
 
-            if (!ackReceived || !this.latestAck.includes("success")) {
+            if (!ackSuccess) {
                 this.showError(errorCode);
                 return false;
             }
 
+            // 2. Wait for FINISH
             let finishStartTime = control.millis();
-            while (!this.latestFinish.includes(deviceName) && control.millis() - finishStartTime < executeTimeoutMs) {
+            while (control.millis() - finishStartTime < executeTimeoutMs) {
+                // Check if the finish is for our device
+                if (this.latestFinish.includes(deviceName)) {
+                    // Immediately check for success
+                    if (this.latestFinish.includes("success")) {
+                        finishSuccess = true;
+                    }
+                    break; // Break the while loop
+                }
                 basic.pause(10);
             }
 
-            const success = this.latestFinish.includes("success");
-            if (!success) {
+            if (!finishSuccess) {
                 this.showError(errorCode);
             }
-            return success;
+            return finishSuccess;
         }
 
         public requestStatus(): string {
