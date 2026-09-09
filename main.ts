@@ -251,8 +251,8 @@ namespace r300_movement {
 //% groups="['Hand Control', 'Hand Status']"
 namespace r300_hands {
     export function controlServo(angle_1: number, angle_2: number, time: number): void {
-        angle_1 = clamp(Math.round(angle_1), -1, 100);
-        angle_2 = clamp(Math.round(angle_2), -1, 100);
+        angle_1 = clamp(Math.round(angle_1), -1, 180);
+        angle_2 = clamp(Math.round(angle_2), -1, 180);
         time = -1;
 
         const canonical = "" + angle_1 + "," + angle_2 + "," + time;
@@ -270,15 +270,25 @@ namespace r300_hands {
     }
 
     //% block="move left hand to %pos"
+    //% pos.min=-1 pos.max=180
     //% group="Hand Control"
     export function leftHand(pos: HandPosition): void {
         controlServo(pos, -1, -1);
     }
 
     //% block="move right hand to %pos"
+    //% pos.min=-1 pos.max=180
     //% group="Hand Control"
     export function rightHand(pos: HandPosition): void {
         controlServo(-1, pos, -1);
+    }
+
+    //% block="move both hands left %a1 right %a2"
+    //% a1.min=-1 a1.max=180
+    //% a2.min=-1 a2.max=180
+    //% group="Hand Control"
+    export function bothHands(a1: number, a2: number): void {
+        controlServo(a1, a2, -1);
     }
 
     //% block="get left hand position"
