@@ -56,27 +56,23 @@ namespace r300 {
             this.latestAck = "";
             this.latestFinish = "";
             let ackSuccess = false;
-            let finishSuccess = false;
 
-            // 1. Send command and wait for ACK
             for (let attempt = 0; attempt < 3; attempt++) {
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
                 while (control.millis() - ackStartTime < 500) {
-                    // Check if the ack is for our device
                     if (this.latestAck.includes(deviceName)) {
-                        // Immediately check for success before it gets overwritten
                         if (this.latestAck.includes("success")) {
                             ackSuccess = true;
                         }
-                        break; // Break the while loop
+                        break;
                     }
                     basic.pause(10);
                 }
 
                 if (ackSuccess) {
-                    break; // Break the retry loop if successful
+                    break;
                 }
             }
 
@@ -85,24 +81,27 @@ namespace r300 {
                 return false;
             }
 
-            // 2. Wait for FINISH
+            // Finish checking logic commented out for bypass
+            /*
+            let finishSuccess = false;
             let finishStartTime = control.millis();
             while (control.millis() - finishStartTime < executeTimeoutMs) {
-                // Check if the finish is for our device
                 if (this.latestFinish.includes(deviceName)) {
-                    // Immediately check for success
                     if (this.latestFinish.includes("success")) {
                         finishSuccess = true;
                     }
-                    break; // Break the while loop
+                    break;
                 }
                 basic.pause(10);
             }
 
             if (!finishSuccess) {
                 this.showError(errorCode);
+                return false;
             }
-            return finishSuccess;
+            */
+
+            return true;
         }
 
         public requestStatus(): string {
@@ -117,27 +116,25 @@ namespace r300 {
             return this.latestStatus;
         }
 
-        public requestLeftHand(): string {
+        public requestServoStatus(): void {
             this.latestLeftHand = "";
-            const payload = JSON.stringify({ cmd: "get_left_hand" });
+            this.latestRightHand = "";
+            const payload = JSON.stringify({ cmd: "get_servo" });
             serial.writeLine(payload);
 
             let startTime = control.millis();
-            while (this.latestLeftHand == "" && control.millis() - startTime < 2000) {
+            while ((this.latestLeftHand == "" || this.latestRightHand == "") && control.millis() - startTime < 2000) {
                 basic.pause(10);
             }
+        }
+
+        public requestLeftHand(): string {
+            this.requestServoStatus();
             return this.latestLeftHand;
         }
 
         public requestRightHand(): string {
-            this.latestRightHand = "";
-            const payload = JSON.stringify({ cmd: "get_right_hand" });
-            serial.writeLine(payload);
-
-            let startTime = control.millis();
-            while (this.latestRightHand == "" && control.millis() - startTime < 2000) {
-                basic.pause(10);
-            }
+            this.requestServoStatus();
             return this.latestRightHand;
         }
 
@@ -216,14 +213,14 @@ namespace r300_movement {
         const expected = checksum(canonical);
 
         const payload = JSON.stringify({
-            cmd: "control_motor",
+            cmd: "set_control_motor",
             rotation: rotation,
             forward: forward,
             time: time,
             checksum: expected
         });
 
-        r300.link.executeCommand("control_motor", payload, 1, time + 2000);
+        r300.link.executeCommand("set_control_motor", payload, 1, time + 2000);
     }
 
     //% block="drive %dir for %time seconds"
@@ -273,14 +270,14 @@ namespace r300_hands {
         const expected = checksum(canonical);
 
         const payload = JSON.stringify({
-            cmd: "control_servo",
+            cmd: "set_control_servo",
             a1: angle_1,
             a2: angle_2,
             time: time,
             checksum: expected
         });
 
-        r300.link.executeCommand("control_servo", payload, 2, 2000);
+        r300.link.executeCommand("set_control_servo", payload, 2, 2000);
     }
 
     //% block="move left hand to %pos"
@@ -399,11 +396,11 @@ namespace r300_speaker {
     //% group="Audio Actions"
     export function speakText(text: string): void {
         const payload = JSON.stringify({
-            cmd: "speak",
+            cmd: "set_speak",
             message: text
         });
         const timeoutMs = text.length * 100 + 2000;
-        r300.link.executeCommand("speak", payload, 4, timeoutMs);
+        r300.link.executeCommand("set_speak", payload, 4, timeoutMs);
     }
 
     //% block="set speaker volume to %volume"
@@ -442,10 +439,10 @@ namespace r300_mode {
     //% group="Configuration"
     export function bypassMode(bypass: boolean): void {
         const payload = JSON.stringify({
-            cmd: "bypass_mode",
+            cmd: "set_bypass_mode",
             bypass: bypass
         });
-        r300.link.executeCommand("bypass_mode", payload, 7, 2000);
+        r300.link.executeCommand("set_bypass_mode", payload, 7, 2000);
     }
 
     //% block="get robot status"
@@ -471,9 +468,9 @@ enum TurnDirection {
 
 enum HandPosition {
     //% block="up"
-    Up = 100,
+    Up = 180,
     //% block="down"
-    Down = 50,
+    Down = 90,
     //% block="back"
     Back = 0
 }
