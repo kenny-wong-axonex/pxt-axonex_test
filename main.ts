@@ -4,6 +4,7 @@ namespace r300 {
         private latestAck: string = "";
         private ackReceived: boolean = false;
         private ackSuccess: boolean = false;
+        private expectedAckDevice: string = "";
         private latestFinish: string = "";
         private latestStatus: string = "";
         private latestLeftHand: string = "";
@@ -22,9 +23,11 @@ namespace r300 {
                 serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
                     const line = serial.readUntil(serial.delimiters(Delimiters.NewLine)).trim();
                     if (line.includes("_ack")) {
-                        this.latestAck = line;
-                        this.ackReceived = true;
-                        this.ackSuccess = line.includes("success");
+                        if (this.expectedAckDevice != "" && line.includes(this.expectedAckDevice)) {
+                            this.latestAck = line;
+                            this.ackReceived = true;
+                            this.ackSuccess = line.includes("success");
+                        }
                     } else if (line.includes("_finish")) {
                         this.latestFinish = line;
                     } else {
@@ -60,6 +63,7 @@ namespace r300 {
             this.latestAck = "";
             this.ackReceived = false;
             this.ackSuccess = false;
+            this.expectedAckDevice = deviceName;
             this.latestFinish = "";
             const ackTimeoutMs = 500;
             const maxAttempts = 3;
@@ -67,6 +71,7 @@ namespace r300 {
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 this.ackReceived = false;
                 this.ackSuccess = false;
+                this.latestAck = "";
                 serial.writeLine(payload);
 
                 let ackStartTime = control.millis();
@@ -85,6 +90,7 @@ namespace r300 {
             if (!(this.ackReceived && this.latestAck.includes(deviceName) && this.ackSuccess)) {
                 // ACK timeout: report the error, then return so the next block can run.
                 this.showError(errorCode);
+                this.expectedAckDevice = "";
                 return false;
             }
 
@@ -108,6 +114,7 @@ namespace r300 {
             }
             */
 
+            this.expectedAckDevice = "";
             return true;
         }
 
