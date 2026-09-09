@@ -14,52 +14,55 @@ namespace r300 {
         private listenerRegistered: boolean = false;
 
         constructor() {
+        }
+
+        private ensureInitialized(): void {
+            if (this.listenerRegistered) {
+                return;
+            }
+
             if (!input.buttonIsPressed(Button.A)) {
                 serial.redirect(SerialPin.P0, SerialPin.P1, BaudRate.BaudRate115200);
             }
-            /*
-            if (!this.listenerRegistered) {
-                this.listenerRegistered = true;
-                serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
-                    const line = serial.readLine().trim();
-                    if (line.includes("_ack")) {
-                        if (this.expectedAckDevice != "" && line.includes(this.expectedAckDevice)) {
-                            this.latestAck = line;
-                            this.ackReceived = true;
-                            this.ackSuccess = line.includes("success");
-                        }
-                    } else if (line.includes("_finish")) {
-                        this.latestFinish = line;
-                    } else {
-                        try {
-                            const parsed = JSON.parse(line);
-                            if (parsed.cmd === "system_status" && parsed.status !== undefined) {
-                                this.latestStatus = "" + parsed.status;
-                            } else if (parsed.cmd === "servo_status") {
-                                if (parsed.a1 !== undefined) {
-                                    this.latestLeftHand = "" + parsed.a1;
-                                }
-                                if (parsed.a2 !== undefined) {
-                                    this.latestRightHand = "" + parsed.a2;
-                                }
-                            } else if (parsed.cmd === "emotion_status" && parsed.emotion !== undefined) {
-                                this.latestEmotion = "" + parsed.emotion;
-                            } else if (parsed.cmd === "volume_status" && parsed.volume !== undefined) {
-                                this.latestVolume = "" + parsed.volume;
-                            } else {
-                                // r300_api.dispatchApi(line);
-                            }
-                        } catch (e) {
-                            // r300_api.dispatchApi(line);
-                        }
+
+            this.listenerRegistered = true;
+            serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
+                const line = serial.readLine().trim();
+                if (line.includes("_ack")) {
+                    if (this.expectedAckDevice != "" && line.includes(this.expectedAckDevice)) {
+                        this.latestAck = line;
+                        this.ackReceived = true;
+                        this.ackSuccess = line.includes("success");
                     }
-                });
-            }
-            */
+                } else if (line.includes("_finish")) {
+                    this.latestFinish = line;
+                } else {
+                    try {
+                        const parsed = JSON.parse(line);
+                        if (parsed.cmd === "system_status" && parsed.status !== undefined) {
+                            this.latestStatus = "" + parsed.status;
+                        } else if (parsed.cmd === "servo_status") {
+                            if (parsed.a1 !== undefined) {
+                                this.latestLeftHand = "" + parsed.a1;
+                            }
+                            if (parsed.a2 !== undefined) {
+                                this.latestRightHand = "" + parsed.a2;
+                            }
+                        } else if (parsed.cmd === "emotion_status" && parsed.emotion !== undefined) {
+                            this.latestEmotion = "" + parsed.emotion;
+                        } else if (parsed.cmd === "volume_status" && parsed.volume !== undefined) {
+                            this.latestVolume = "" + parsed.volume;
+                        }
+                    } catch (e) {
+                    }
+                }
+            });
+
             this.startKeepAlive();
         }
 
         public executeCommand(deviceName: string, payload: string, errorCode: number, executeTimeoutMs: number = 2000): boolean {
+            this.ensureInitialized();
             this.latestAck = "";
             this.ackReceived = false;
             this.ackSuccess = false;
@@ -119,6 +122,7 @@ namespace r300 {
         }
 
         public requestStatus(): string {
+            this.ensureInitialized();
             this.latestStatus = "";
             const payload = JSON.stringify({ cmd: "get_status" });
             serial.writeLine(payload);
@@ -131,6 +135,7 @@ namespace r300 {
         }
 
         public requestServoStatus(): void {
+            this.ensureInitialized();
             this.latestLeftHand = "";
             this.latestRightHand = "";
             const payload = JSON.stringify({ cmd: "get_servo" });
@@ -153,6 +158,7 @@ namespace r300 {
         }
 
         public requestEmotion(): string {
+            this.ensureInitialized();
             this.latestEmotion = "";
             const payload = JSON.stringify({ cmd: "get_emotion" });
             serial.writeLine(payload);
@@ -165,6 +171,7 @@ namespace r300 {
         }
 
         public requestVolume(): string {
+            this.ensureInitialized();
             this.latestVolume = "";
             const payload = JSON.stringify({ cmd: "get_volume" });
             serial.writeLine(payload);
