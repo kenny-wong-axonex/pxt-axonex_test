@@ -18,7 +18,7 @@ namespace r300 {
             if (!this.listenerRegistered) {
                 this.listenerRegistered = true;
                 serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
-                    const line = serial.readLine().trim();
+                    const line = serial.readUntil(serial.delimiters(Delimiters.NewLine)).trim();
                     if (line.includes("_ack")) {
                         this.latestAck = line;
                     } else if (line.includes("_finish")) {
