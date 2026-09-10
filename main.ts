@@ -11,7 +11,7 @@ function sendBoth(msg: string): void {
     console.log("[TX] " + data);               // → USB log
     serial.writeLine(data);                    // → UART P0/P1（R300 收到）
 }
-
+/*
 // ── TEMP TEST（測試用，測試完刪走） ─────────────────────────
 // 撳 Button A → 雙手 180 → 雙手 90
 input.onButtonPressed(Button.A, function () {
@@ -21,7 +21,7 @@ input.onButtonPressed(Button.A, function () {
     r300_hands.bothHands(90, 90);
     console.log("[BTN] done");
 });
-
+*/
 //% color="#AA278D" icon="\uf013" block="R300 Core"
 namespace r300 {
     export class R300Link {
