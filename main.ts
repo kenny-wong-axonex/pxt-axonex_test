@@ -1,6 +1,7 @@
 // ── Boot log ────────────────────────────────────────────────
 // 等 USB CDC ready 先 print，避免開機頭幾個字被食
 basic.pause(300);
+serial.setRxBufferSize(128);
 serial.writeLine("Hello World!");
 
 // ── TX helper ───────────────────────────────────────────────
@@ -51,6 +52,7 @@ namespace r300 {
             this.listenerRegistered = true;
             serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
                 const line = serial.readLine().trim();
+                // basic.showString(line);
                 console.log("[RX] " + line);   // ← 收到嘅嘢都印去 USB log
                 if (line.includes("_ack")) {
                     if (this.expectedAckDevice != "" && line.includes(this.expectedAckDevice)) {
@@ -62,7 +64,10 @@ namespace r300 {
                     this.latestFinish = line;
                 } else {
                     try {
+                        // led.toggle(0, 0);
                         const parsed = JSON.parse(line);
+                        // const parsed = JSON.parse("{\"cmd\": \"set_control_servo_ack\", \"status\": \"success\"}");
+                        // led.toggle(1, 0);
                         if (parsed.MB_cmd === "system_status" && parsed.status !== undefined) {
                             this.latestStatus = "" + parsed.status;
                         } else if (parsed.MB_cmd === "servo_status") {
@@ -78,6 +83,7 @@ namespace r300 {
                             this.latestVolume = "" + parsed.volume;
                         }
                     } catch (e) {
+                        led.toggle(2, 0);
                     }
                 }
             });
