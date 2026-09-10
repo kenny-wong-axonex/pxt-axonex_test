@@ -63,18 +63,18 @@ namespace r300 {
                 } else {
                     try {
                         const parsed = JSON.parse(line);
-                        if (parsed.cmd === "system_status" && parsed.status !== undefined) {
+                        if (parsed.MB_cmd === "system_status" && parsed.status !== undefined) {
                             this.latestStatus = "" + parsed.status;
-                        } else if (parsed.cmd === "servo_status") {
+                        } else if (parsed.MB_cmd === "servo_status") {
                             if (parsed.a1 !== undefined) {
                                 this.latestLeftHand = "" + parsed.a1;
                             }
                             if (parsed.a2 !== undefined) {
                                 this.latestRightHand = "" + parsed.a2;
                             }
-                        } else if (parsed.cmd === "emotion_status" && parsed.emotion !== undefined) {
+                        } else if (parsed.MB_cmd === "emotion_status" && parsed.emotion !== undefined) {
                             this.latestEmotion = "" + parsed.emotion;
-                        } else if (parsed.cmd === "volume_status" && parsed.volume !== undefined) {
+                        } else if (parsed.MB_cmd === "volume_status" && parsed.volume !== undefined) {
                             this.latestVolume = "" + parsed.volume;
                         }
                     } catch (e) {
@@ -148,7 +148,7 @@ namespace r300 {
         public requestStatus(): string {
             this.ensureInitialized();
             this.latestStatus = "";
-            const payload = JSON.stringify({ cmd: "get_status" });
+            const payload = JSON.stringify({ MB_cmd: "get_status" });
             sendBoth(payload);
 
             let startTime = control.millis();
@@ -162,7 +162,7 @@ namespace r300 {
             this.ensureInitialized();
             this.latestLeftHand = "";
             this.latestRightHand = "";
-            const payload = JSON.stringify({ cmd: "get_servo" });
+            const payload = JSON.stringify({ MB_cmd: "get_servo" });
             sendBoth(payload);
 
             let startTime = control.millis();
@@ -184,7 +184,7 @@ namespace r300 {
         public requestEmotion(): string {
             this.ensureInitialized();
             this.latestEmotion = "";
-            const payload = JSON.stringify({ cmd: "get_emotion" });
+            const payload = JSON.stringify({ MB_cmd: "get_emotion" });
             sendBoth(payload);
 
             let startTime = control.millis();
@@ -197,7 +197,7 @@ namespace r300 {
         public requestVolume(): string {
             this.ensureInitialized();
             this.latestVolume = "";
-            const payload = JSON.stringify({ cmd: "get_volume" });
+            const payload = JSON.stringify({ MB_cmd: "get_volume" });
             sendBoth(payload);
 
             let startTime = control.millis();
@@ -258,7 +258,7 @@ namespace r300_movement {
         const expected = checksum(canonical);
 
         const payload = JSON.stringify({
-            cmd: "set_control_motor",
+            MB_cmd: "set_control_motor",
             rotation: rotation,
             forward: forward,
             time: time,
@@ -315,7 +315,7 @@ namespace r300_hands {
         const expected = checksum(canonical);
 
         const payload = JSON.stringify({
-            cmd: "set_control_servo",
+            MB_cmd: "set_control_servo",
             a1: angle_1,
             a2: angle_2,
             time: time,
@@ -421,7 +421,7 @@ namespace r300_emotion {
     //% group="Emotion Control"
     export function showEmotion(face: RobotEmotion): void {
         const payload = JSON.stringify({
-            cmd: "set_emotion",
+            MB_cmd: "set_emotion",
             emotion: face
         });
         r300.link.executeCommand("set_emotion", payload, 3, 2000);
@@ -441,7 +441,7 @@ namespace r300_speaker {
     //% group="Audio Actions"
     export function speakText(text: string): void {
         const payload = JSON.stringify({
-            cmd: "set_speak",
+            MB_cmd: "set_speak",
             message: text
         });
         const timeoutMs = text.length * 100 + 2000;
@@ -454,7 +454,7 @@ namespace r300_speaker {
     export function setSpeakerVol(volume: number): void {
         volume = clamp(Math.round(volume), 0, 100);
         const payload = JSON.stringify({
-            cmd: "set_volume",
+            MB_cmd: "set_volume",
             volume: volume
         });
         r300.link.executeCommand("set_volume", payload, 5, 2000);
@@ -474,7 +474,7 @@ namespace r300_mode {
     //% group="Configuration"
     export function setRobotMode(mode: RobotMode): void {
         const payload = JSON.stringify({
-            cmd: "set_mode",
+            MB_cmd: "set_mode",
             mode: mode
         });
         r300.link.executeCommand("set_mode", payload, 6, 2000);
@@ -484,7 +484,7 @@ namespace r300_mode {
     //% group="Configuration"
     export function bypassMode(bypass: boolean): void {
         const payload = JSON.stringify({
-            cmd: "set_bypass_mode",
+            MB_cmd: "set_bypass_mode",
             bypass: bypass
         });
         r300.link.executeCommand("set_bypass_mode", payload, 7, 2000);
